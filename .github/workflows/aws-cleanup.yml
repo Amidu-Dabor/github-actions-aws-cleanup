@@ -28,4 +28,4 @@ jobs:
       - name: Cleanup AWS Step Functions Resources
         shell: pwsh
         run: |
-          ./aws-cleanup-stepfunctions.ps1
+          ./aws-cleanup-for-all-resources.ps1
