@@ -2,7 +2,7 @@ on:
   workflow_dispatch: # Manual dispatch event
 
 permissions:
-  id-token: write # This is required for requesting the JWT
+  id-token: write # This is required for requesting the JWT (JSON Web Token)
   contents: read  # This is required for actions/checkout
 
 jobs:
