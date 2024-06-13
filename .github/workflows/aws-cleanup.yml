@@ -7,10 +7,10 @@ permissions:
 
 jobs:
   aws-cleanup:
-    runs-on: ubuntu-lates
+    runs-on: ubuntu-latest
     steps:
       - name: Authenticate to AWS using OpenID Connect
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::295793222430:role/github-actions-cleanup
-          aws-region: us-west-2
+          aws-region: us-east-1
