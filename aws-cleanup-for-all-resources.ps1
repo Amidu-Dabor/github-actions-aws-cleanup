@@ -1,9 +1,9 @@
 # Create a List of State Machines
-[string]$StateMachineList = Get-SFNStateMachineList | % { Get-SFNStateMachine -StateMachineArn $PSItem.StateMachineArn } -ErrorAction SilentlyContinue
+[string]$StateMachineList = Get-SFNStateMachineList
 # Create a List of Activity Tasks
-[string]$ActivityList = Get-SFNActivityList | % { Get-SFNActivity -ActivityArn $PSItem.ActivityArn }
+[string]$ActivityList = Get-SFNActivityList
 # Create a list of EC2 instances
-[string]$ec2InstanceList = (Get-EC2Instance).Instances | % { Get-EC2Instance -InstanceId $PSItem.InstanceId }
+[string]$ec2InstanceList = (Get-EC2Instance).Instances
 
 param (
   # Cleanup Template
