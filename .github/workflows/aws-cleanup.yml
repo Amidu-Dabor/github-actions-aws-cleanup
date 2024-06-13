@@ -1,8 +1,16 @@
 on:
   workflow_dispatch: # Manual dispatch event
 
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
 jobs:
   aws-cleanup:
     runs-on: ubuntu-lates
     steps:
-      - 
+      - name: Authenticate to AWS using OpenID Connect
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::295793222430:role/github-actions-cleanup
+          aws-region: us-east-1
