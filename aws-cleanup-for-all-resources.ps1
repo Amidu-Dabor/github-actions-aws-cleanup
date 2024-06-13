@@ -1,9 +1,9 @@
 # Create a List of State Machines
-[string]$StateMachineList = Get-SFNStateMachineList
+[string]$StateMachineList = Get-SFNStateMachineList | % { Get-SFNStateMachine -StateMachineArn $_.StateMachineArn } -ErrorAction SilentlyContinue
 # Create a List of Activity Tasks
-[string]$ActivityList = Get-SFNActivityList
+[string]$ActivityList = Get-SFNActivityList | % { Get-SFNActivity -ActivityArn $_.ActivityArn }
 # Create a list of EC2 instances
-[string]$ec2InstanceList = (Get-EC2Instance).Instances
+[string]$ec2InstanceList = (Get-EC2Instance).Instances | % { GetEC2Instance -InstanceId $_.InstanceId }
 
 param (
   # Cleanup Template
@@ -94,7 +94,7 @@ Write-Host "Resource Cleanup TemplateBody content:"
 Write-Host $TemplateBody
 
 # Execute the function with provided parameters
-Cleanup-AWS-Resources-If-Exist $TemplateBody $StateMachineList $ActivityList $ec2InstanceList
+Cleanup-AWS-Resources-If-Exist -TemplateBody $TemplateBody -GetListOfStateMachines $StateMachineList -GetListOfActivities $ActivityList -GetListOfEC2Instances $ec2InstanceList
 
 # Verify resource cleanup process
 try {
