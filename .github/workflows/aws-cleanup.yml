@@ -1,0 +1,8 @@
+on:
+  workflow_dispatch: # Manual dispatch event
+
+jobs:
+  aws-cleanup:
+    runs-on: ubuntu-lates
+    steps:
+      - 
