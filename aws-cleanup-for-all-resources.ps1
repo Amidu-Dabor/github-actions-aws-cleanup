@@ -1,5 +1,5 @@
 # Create a List of State Machines
-[string]$StateMachineList = ($Get-StateMachineList | % { Get-SFNStateMachine -StateMachineArn $PSItem.StateMachineArn } -ErrorAction SilentlyContinue) -ne $null
+[string]$StateMachineList = Get-StateMachineList | % { Get-SFNStateMachine -StateMachineArn $PSItem.StateMachineArn } -ErrorAction SilentlyContinue -ne $null
 # Create a List of Activity Tasks
 [string]$ActivityList = Get-SFNActivityList | % { Get-SFNActivity -ActivityArn $PSItem.ActivityArn }
 # Create a list of EC2 instances
@@ -13,9 +13,9 @@ param (
 function Cleanup-AWS-Resources-If-Exist {
     param (
         [string]$TemplateBody,
-        [string]$GetListOfStateMachines,
-        [string]$GetListOfActivities,
-        [string]$GetListOfEC2Instances
+        $GetListOfStateMachines,
+        $GetListOfActivities,
+        $GetListOfEC2Instances
     )
 
     # Delete all state machines if list is not empty
