@@ -1,10 +1,11 @@
+# Create a List of State Machines
+[string]$StateMachineList = ($Get-StateMachineList | % { Get-SFNStateMachine -StateMachineArn $PSItem.StateMachineArn } -ErrorAction SilentlyContinue) -ne $null
+# Create a List of Activity Tasks
+[string]$ActivityList = Get-SFNActivityList | % { Get-SFNActivity -ActivityArn $PSItem.ActivityArn }
+# Create a list of EC2 instances
+[string]$ec2InstanceList = (Get-EC2Instance).Instances | % { Get-EC2Instance -InstanceId $PSItem.InstanceId }
+
 param (
-  # Create a List of State Machines
-  [string]$StateMachineList = ($Get-StateMachineList | % { Get-SFNStateMachine -StateMachineArn $PSItem.StateMachineArn } -ErrorAction SilentlyContinue) -ne $null
-  # Create a List of Activity Tasks
-  [string]$ActivityList = Get-SFNActivityList | % { Get-SFNActivity -ActivityArn $PSItem.ActivityArn }
-  # Create a list of EC2 instances
-  [string]$ec2InstanceList = (Get-EC2Instance).Instances | % { Get-EC2Instance -InstanceId $PSItem.InstanceId }
   # Cleanup Template
   [string]$TemplateFilePath = 'aws-cleanup.yml'
 )
