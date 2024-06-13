@@ -1,5 +1,5 @@
 param (
-    [string]$TemplateFilePath = 'aws-cleanup.yml'
+    [string]$TemplateFilePath = 'workflows/aws-cleanup.yml'
 )
 
 # Initialize lists outside the param block
