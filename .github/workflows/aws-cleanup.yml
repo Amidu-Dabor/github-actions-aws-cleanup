@@ -8,7 +8,7 @@ permissions:
   contents: read  # This is required for actions/checkout
 
 jobs:
-  aws-cleanup:
+  AWS-Step-Functions-Cleanup:
     runs-on: ubuntu-latest
     steps:
       - name: Installing AWS Step Functions Module
@@ -26,6 +26,28 @@ jobs:
         uses: actions/checkout@v4.1.7
       
       - name: Cleanup AWS Step Functions Resources
+        shell: pwsh
+        run: |
+          ./aws-cleanup-for-all-resources.ps1
+
+  AWS-EC2-Activity-Cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Installing AWS EC2 Module
+        shell: pwsh
+        run: |
+          Install-Module -Name AWS.Tools.EC2 -Scope CurrentUser -Force
+          
+      - name: Authenticate to AWS using OpenID Connect
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::295793222430:role/github-actions-cleanup
+          aws-region: us-east-1
+
+      - name: Clone Source Code from My GitHub Repository to run powershell script
+        uses: actions/checkout@v4.1.7
+      
+      - name: Cleanup AWS EC2 Resources
         shell: pwsh
         run: |
           ./aws-cleanup-for-all-resources.ps1
