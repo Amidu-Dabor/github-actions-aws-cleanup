@@ -3,9 +3,9 @@ param (
 )
 
 # Initialize lists outside the param block
-$StateMachineList = Get-SFNStateMachine
-$ActivityList = Get-SFNActivity
-$ec2InstanceList = Get-EC2Instance | Select-Object -ExpandProperty Instances
+$StateMachineList = aws stepfunctions list-state-machines | ConvertFrom-Json
+$ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
+$ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
 
 function Cleanup-AWS-Resources-If-Exist {
     param (
@@ -16,52 +16,54 @@ function Cleanup-AWS-Resources-If-Exist {
     )
 
     # Delete all state machines if list is not empty
-    if ($GetListOfStateMachines.Count -eq 0) {
+    if ($GetListOfStateMachines.stateMachines.Count -eq 0) {
         Write-Host "No state machines found."
     } else {
-        foreach ($stateMachine in $GetListOfStateMachines) {
+        foreach ($stateMachine in $GetListOfStateMachines.stateMachines) {
             try {
-                Write-Host "Deleting state machine [$($stateMachine.StateMachineArn)]..."
-                Remove-SFNStateMachine -StateMachineArn $stateMachine.StateMachineArn -ErrorAction Stop
-                Write-Host "State machine [$($stateMachine.StateMachineArn)] has been successfully deleted."
+                Write-Host "Deleting state machine [$($stateMachine.stateMachineArn)]..."
+                aws stepfunctions delete-state-machine --state-machine-arn $stateMachine.stateMachineArn
+                Write-Host "State machine [$($stateMachine.stateMachineArn)] has been successfully deleted."
             } catch {
                 # Handle the case where the state machine does not exist
-                Write-Host "Failed to delete state machine [$($stateMachine.StateMachineArn)]."
+                Write-Host "Failed to delete state machine [$($stateMachine.stateMachineArn)]."
                 continue
             }
         }
     }
 
     # Delete all activity tasks if list is not empty
-    if ($GetListOfActivities.Count -eq 0) {
+    if ($GetListOfActivities.activities.Count -eq 0) {
         Write-Host "No activities found."
     } else {
-        foreach ($activity in $GetListOfActivities) {
+        foreach ($activity in $GetListOfActivities.activities) {
             try {
-                Write-Host "Deleting activity [$($activity.ActivityArn)]..."
-                Remove-SFNActivity -ActivityArn $activity.ActivityArn -ErrorAction Stop
-                Write-Host "Activity [$($activity.ActivityArn)] has been successfully deleted."
+                Write-Host "Deleting activity [$($activity.activityArn)]..."
+                aws stepfunctions delete-activity --activity-arn $activity.activityArn
+                Write-Host "Activity [$($activity.activityArn)] has been successfully deleted."
             } catch {
                 # Handle the case where the activity does not exist
-                Write-Host "Failed to delete activity [$($activity.ActivityArn)]."
+                Write-Host "Failed to delete activity [$($activity.activityArn)]."
                 continue
             }
         }
     }
 
     # Delete all EC2 instances if list is not empty
-    if ($GetListOfEC2Instances.Count -eq 0) {
+    if ($GetListOfEC2Instances.Reservations.Count -eq 0) {
         Write-Host "No EC2 instances found."
     } else {
-        foreach ($ec2Instance in $GetListOfEC2Instances) {
-            try {
-                Write-Host "Deleting EC2 instance [$($ec2Instance.InstanceId)]..."
-                Remove-EC2Instance -InstanceId $ec2Instance.InstanceId -ErrorAction Stop
-                Write-Host "EC2 instance [$($ec2Instance.InstanceId)] has been successfully deleted."
-            } catch {
-                # Handle the case where the instance does not exist
-                Write-Host "Failed to delete EC2 instance [$($ec2Instance.InstanceId)]."
-                continue
+        foreach ($reservation in $GetListOfEC2Instances.Reservations) {
+            foreach ($ec2Instance in $reservation.Instances) {
+                try {
+                    Write-Host "Deleting EC2 instance [$($ec2Instance.InstanceId)]..."
+                    aws ec2 terminate-instances --instance-ids $ec2Instance.InstanceId
+                    Write-Host "EC2 instance [$($ec2Instance.InstanceId)] has been successfully deleted."
+                } catch {
+                    # Handle the case where the instance does not exist
+                    Write-Host "Failed to delete EC2 instance [$($ec2Instance.InstanceId)]."
+                    continue
+                }
             }
         }
     }
@@ -73,7 +75,7 @@ $TemplateBody = Get-Content -Path $TemplateFilePath -Raw
 # Validate the template
 Write-Host "Validating AWS Resource Cleanup template..."
 try {
-    Test-CFNTemplate -TemplateBody $TemplateBody -ErrorAction Stop
+    aws cloudformation validate-template --template-body $TemplateBody
     Write-Host "Template validation succeeded."
 } catch {
     Write-Host "Template validation failed: $_"
@@ -89,15 +91,15 @@ Cleanup-AWS-Resources-If-Exist -TemplateBody $TemplateBody -GetListOfStateMachin
 
 # Verify resource cleanup process
 try {
-    $stateMachineCleanupStatus = $StateMachineList | % { Get-SFNStateMachine -StateMachineArn $_.StateMachineArn -ErrorAction SilentlyContinue }
-    $ActivityCleanupStatus = $ActivityList | % { Get-SFNActivity -ActivityArn $_.ActivityArn -ErrorAction SilentlyContinue }
-    $ec2InstanceCleanupStatus = $ec2InstanceList | % { Get-EC2Instance -InstanceId $_.InstanceId -ErrorAction SilentlyContinue }
+    $stateMachineCleanupStatus = aws stepfunctions list-state-machines | ConvertFrom-Json
+    $ActivityCleanupStatus = aws stepfunctions list-activities | ConvertFrom-Json
+    $ec2InstanceCleanupStatus = aws ec2 describe-instances | ConvertFrom-Json
 
-    if ($stateMachineCleanupStatus.Count -ne 0) {
+    if ($stateMachineCleanupStatus.stateMachines.Count -ne 0) {
         Write-Host "State machine still exists in your AWS resource space."
-    } elseif ($ActivityCleanupStatus.Count -ne 0) {
+    } elseif ($ActivityCleanupStatus.activities.Count -ne 0) {
         Write-Host "Activity still exists in your AWS resource space."
-    } elseif ($ec2InstanceCleanupStatus.Count -ne 0) {
+    } elseif ($ec2InstanceCleanupStatus.Reservations.Count -ne 0) {
         Write-Host "EC2 instance still exists in your AWS resource space."
     } else {
         Write-Host "AWS resource space is empty."
