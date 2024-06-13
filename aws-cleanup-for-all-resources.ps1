@@ -1,5 +1,5 @@
 # Create a List of State Machines
-[string]$StateMachineList = Get-StateMachineList | % { Get-SFNStateMachine -StateMachineArn $PSItem.StateMachineArn } -ErrorAction SilentlyContinue -ne $null
+[string]$StateMachineList = Get-SFNStateMachineList | % { Get-SFNStateMachine -StateMachineArn $PSItem.StateMachineArn } -ErrorAction SilentlyContinue -ne $null
 # Create a List of Activity Tasks
 [string]$ActivityList = Get-SFNActivityList | % { Get-SFNActivity -ActivityArn $PSItem.ActivityArn }
 # Create a list of EC2 instances
