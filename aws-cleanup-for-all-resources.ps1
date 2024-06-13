@@ -3,9 +3,9 @@ param (
 )
 
 # Initialize lists outside the param block
-$StateMachineList = Get-SFNStateMachineList | % { Get-SFNStateMachine -StateMachineArn $_.StateMachineArn } -ErrorAction SilentlyContinue
-$ActivityList = Get-SFNActivityList | % { Get-SFNActivity -ActivityArn $_.ActivityArn }
-$ec2InstanceList = (Get-EC2Instance).Instances | % { Get-EC2Instance -InstanceId $_.InstanceId }
+$StateMachineList = Get-SFNStateMachine
+$ActivityList = Get-SFNActivity
+$ec2InstanceList = Get-EC2Instance | Select-Object -ExpandProperty Instances
 
 function Cleanup-AWS-Resources-If-Exist {
     param (
@@ -21,7 +21,7 @@ function Cleanup-AWS-Resources-If-Exist {
     } else {
         foreach ($stateMachine in $GetListOfStateMachines) {
             try {
-                Write-Host "Deleting state machines..."
+                Write-Host "Deleting state machine [$($stateMachine.StateMachineArn)]..."
                 Remove-SFNStateMachine -StateMachineArn $stateMachine.StateMachineArn -ErrorAction Stop
                 Write-Host "State machine [$($stateMachine.StateMachineArn)] has been successfully deleted."
             } catch {
@@ -38,7 +38,7 @@ function Cleanup-AWS-Resources-If-Exist {
     } else {
         foreach ($activity in $GetListOfActivities) {
             try {
-                Write-Host "Deleting activities..."
+                Write-Host "Deleting activity [$($activity.ActivityArn)]..."
                 Remove-SFNActivity -ActivityArn $activity.ActivityArn -ErrorAction Stop
                 Write-Host "Activity [$($activity.ActivityArn)] has been successfully deleted."
             } catch {
@@ -55,7 +55,7 @@ function Cleanup-AWS-Resources-If-Exist {
     } else {
         foreach ($ec2Instance in $GetListOfEC2Instances) {
             try {
-                Write-Host "Deleting EC2 instances..."
+                Write-Host "Deleting EC2 instance [$($ec2Instance.InstanceId)]..."
                 Remove-EC2Instance -InstanceId $ec2Instance.InstanceId -ErrorAction Stop
                 Write-Host "EC2 instance [$($ec2Instance.InstanceId)] has been successfully deleted."
             } catch {
