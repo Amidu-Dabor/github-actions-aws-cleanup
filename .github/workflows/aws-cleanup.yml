@@ -1,5 +1,7 @@
 on:
   workflow_dispatch: # Manual dispatch event
+  schedule:
+    - cron: '0 10 * * *'
 
 permissions:
   id-token: write # This is required for requesting the JWT (JSON Web Token)
