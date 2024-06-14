@@ -4,11 +4,9 @@ param (
 
 # Initialize lists outside the param block
 $StateMachineList = aws stepfunctions list-state-machines | ConvertFrom-Json
-$ActivityList = Get-SFNActivityList
-# aws stepfunctions list-activities | ConvertFrom-Json
-$ec2InstanceList = (Get-EC2Instance).Instances
-# aws ec2 describe-instances | ConvertFrom-Json
-$RegionList = Get-AWSRegion
+$ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
+$RegionList = aws ec2 describe-regions | ConvertFrom-Json
+$ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
 
 function Cleanup-AWS-Resources-If-Exist {
     param (
@@ -19,7 +17,7 @@ function Cleanup-AWS-Resources-If-Exist {
         $GetRegionList
     )
 
-    foreach ($Region in $RegionList.Region) {
+    foreach ($Region in $GetRegionList.Regions.RegionName) {
         # Delete all state machines if list is not empty
         if ($GetListOfStateMachines.stateMachines.Count -eq 0) {
             Write-Host "No state machines found."
@@ -27,8 +25,7 @@ function Cleanup-AWS-Resources-If-Exist {
             foreach ($stateMachine in $GetListOfStateMachines.stateMachines) {
                 try {
                     Write-Host "Deleting state machine [$($stateMachine.stateMachineArn)]..."
-                    Get-SFNStateMachineList -Region $Region | % { Remove-SFNStateMachine -StateMachineArn $_.StateMachineArn -Region $Region -Force }
-                    # aws stepfunctions delete-state-machine --state-machine-arn $stateMachine.stateMachineArn
+                    aws stepfunctions delete-state-machine --state-machine-arn $stateMachine.stateMachineArn --region $Region
                     Write-Host "State machine [$($stateMachine.stateMachineArn)] has been successfully deleted."
                 } catch {
                     # Handle the case where the state machine does not exist
@@ -37,7 +34,7 @@ function Cleanup-AWS-Resources-If-Exist {
                 }
             }
         }
-    
+
         # Delete all activity tasks if list is not empty
         if ($GetListOfActivities.activities.Count -eq 0) {
             Write-Host "No activities found."
@@ -45,8 +42,7 @@ function Cleanup-AWS-Resources-If-Exist {
             foreach ($activity in $GetListOfActivities.activities) {
                 try {
                     Write-Host "Deleting activity [$($activity.activityArn)]..."
-                    Get-SFNActivityList -Region $Region | % { Remove-SFNActivity -ActivityArn $_.ActivityArn -Region $Region -Force }
-                    # aws stepfunctions delete-activity --activity-arn $activity.activityArn
+                    aws stepfunctions delete-activity --activity-arn $activity.activityArn --region $Region
                     Write-Host "Activity [$($activity.activityArn)] has been successfully deleted."
                 } catch {
                     # Handle the case where the activity does not exist
@@ -55,7 +51,7 @@ function Cleanup-AWS-Resources-If-Exist {
                 }
             }
         }
-    
+
         # Delete all EC2 instances if list is not empty
         if ($GetListOfEC2Instances.Reservations.Count -eq 0) {
             Write-Host "No EC2 instances found."
@@ -64,8 +60,7 @@ function Cleanup-AWS-Resources-If-Exist {
                 foreach ($ec2Instance in $reservation.Instances) {
                     try {
                         Write-Host "Deleting EC2 instance [$($ec2Instance.InstanceId)]..."
-                        (Get-EC2Instance).Instances -Region $Region | % { Remove-EC2Instance -InstanceId $_.InstanceId -Region $Region -Force }
-                        # aws ec2 terminate-instances --instance-ids $ec2Instance.InstanceId
+                        aws ec2 terminate-instances --instance-ids $ec2Instance.InstanceId --region $Region
                         Write-Host "EC2 instance [$($ec2Instance.InstanceId)] has been successfully deleted."
                     } catch {
                         # Handle the case where the instance does not exist
@@ -75,7 +70,7 @@ function Cleanup-AWS-Resources-If-Exist {
                 }
             }
         }
-    }  
+    }
 }
 
 # Read the template file content as a single string
@@ -96,7 +91,7 @@ Write-Host "Resource Cleanup TemplateBody content:"
 Write-Host $TemplateBody
 
 # Execute the function with provided parameters
-Cleanup-AWS-Resources-If-Exist -TemplateBody $TemplateBody -GetListOfStateMachines $StateMachineList -GetListOfActivities $ActivityList -GetListOfEC2Instances $ec2InstanceList -Get-AWSRegion $RegionList
+Cleanup-AWS-Resources-If-Exist -TemplateBody $TemplateBody -GetListOfStateMachines $StateMachineList -GetListOfActivities $ActivityList -GetListOfEC2Instances $ec2InstanceList -GetRegionList $RegionList
 
 # Verify resource cleanup process
 try {
