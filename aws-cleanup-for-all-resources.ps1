@@ -5,7 +5,7 @@ param (
 # Initialize lists outside the param block
 $StateMachineList = aws stepfunctions list-state-machines | ConvertFrom-Json
 $ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
-$RegionList = aws ec2 describe-regions | ConvertFrom-Json
+$RegionList = (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -match 'us-east|us-west' }
 $ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
 
 function Cleanup-AWS-Resources-If-Exist {
