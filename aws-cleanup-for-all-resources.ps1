@@ -5,8 +5,10 @@ param (
 # Initialize lists outside the param block
 $StateMachineList = aws stepfunctions list-state-machines | ConvertFrom-Json
 $ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
-$RegionList = (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -notmatch 'us-east|us-west' }
 $ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
+
+# Get all regions and filter out those that match "us-east" or "us-west"
+$RegionList = (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -notmatch 'us-east|us-west' }
 
 function Cleanup-AWS-Resources-If-Exist {
     param (
@@ -17,7 +19,7 @@ function Cleanup-AWS-Resources-If-Exist {
         $GetRegionList
     )
 
-    foreach ($Region in $GetRegionList.Regions.RegionName) {
+    foreach ($Region in $GetRegionList.RegionName) {
         # Delete all state machines if list is not empty
         if ($GetListOfStateMachines.stateMachines.Count -eq 0) {
             Write-Host "No state machines found."
@@ -70,7 +72,7 @@ function Cleanup-AWS-Resources-If-Exist {
                 }
             }
         }
-    }
+    }  
 }
 
 # Read the template file content as a single string
