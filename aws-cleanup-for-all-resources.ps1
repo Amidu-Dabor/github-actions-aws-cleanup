@@ -3,13 +3,12 @@ param (
 )
 
 # Initialize lists outside the param block
-$StateMachineList = aws stepfunctions list-state-machines | ConvertFrom-Json
-$ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
-$ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
+$StateMachineList = aws stepfunctions list-state-machines --region us-east-1 | ConvertFrom-Json
+$ActivityList = aws stepfunctions list-activities --region us-east-1 | ConvertFrom-Json
+$ec2InstanceList = aws ec2 describe-instances --region us-east-1 | ConvertFrom-Json
 
-# Get all regions and filter to include only "us-east" or "us-west"
-$RegionList = Get-AWSRegion
-# (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -match 'us-east|us-west' }
+# Get all regions
+$RegionList = (aws ec2 describe-regions | ConvertFrom-Json).Regions
 
 function Cleanup-AWS-Resources-If-Exist {
     param (
@@ -20,27 +19,32 @@ function Cleanup-AWS-Resources-If-Exist {
         $GetRegionList
     )
 
-    foreach ($Region in $GetRegionList.Region) {
+    foreach ($Region in $GetRegionList.RegionName) {
+        # Get lists of state machines, activities, and EC2 instances for the current region
+        $StateMachineList = aws stepfunctions list-state-machines --region $Region | ConvertFrom-Json
+        $ActivityList = aws stepfunctions list-activities --region $Region | ConvertFrom-Json
+        $ec2InstanceList = aws ec2 describe-instances --region $Region | ConvertFrom-Json
+
         # Delete all state machines if list is not empty
-        if ($GetListOfStateMachines.stateMachines.Count -eq 0 -or $GetListOfActivities.Count -eq 0) {
-            Write-Host "No state machines/activities found."
+        if ($StateMachineList.stateMachines.Count -eq 0 -or $ActivityList.activities.Count -eq 0) {
+            Write-Host "No state machines/activities found in region [$Region]."
         } else {
-            foreach ($stateMachine in $GetListOfStateMachines.stateMachines) {
+            foreach ($stateMachine in $StateMachineList.stateMachines) {
                 try {
                     Write-Host "Deleting state machine [$($stateMachine.stateMachineArn)] in region [$Region]..."
                     aws stepfunctions delete-state-machine --state-machine-arn $stateMachine.stateMachineArn --region $Region
-                    Write-Host "State machine [$($stateMachine.stateMachineArn)] has been successfully deleted."
+                    Write-Host "State machine [$($stateMachine.stateMachineArn)] has been successfully deleted in region [$Region]."
                 } catch {
                     Write-Host "Failed to delete state machine [$($stateMachine.stateMachineArn)] in region [$Region]."
                     continue
                 }
             }
 
-            foreach ($activity in $GetListOfActivities.activities) {
+            foreach ($activity in $ActivityList.activities) {
                 try {
                     Write-Host "Deleting activity [$($activity.activityArn)] in region [$Region]..."
                     aws stepfunctions delete-activity --activity-arn $activity.activityArn --region $Region
-                    Write-Host "Activity [$($activity.activityArn)] has been successfully deleted."
+                    Write-Host "Activity [$($activity.activityArn)] has been successfully deleted in region [$Region]."
                 } catch {
                     Write-Host "Failed to delete activity [$($activity.activityArn)] in region [$Region]."
                     continue
@@ -49,15 +53,15 @@ function Cleanup-AWS-Resources-If-Exist {
         }
 
         # Delete all EC2 instances if list is not empty
-        if ($GetListOfEC2Instances.Reservations.Count -eq 0) {
-            Write-Host "No EC2 instances found."
+        if ($ec2InstanceList.Reservations.Count -eq 0) {
+            Write-Host "No EC2 instances found in region [$Region]."
         } else {
-            foreach ($reservation in $GetListOfEC2Instances.Reservations) {
+            foreach ($reservation in $ec2InstanceList.Reservations) {
                 foreach ($ec2Instance in $reservation.Instances) {
                     try {
                         Write-Host "Deleting EC2 instance [$($ec2Instance.InstanceId)] in region [$Region]..."
                         aws ec2 terminate-instances --instance-ids $ec2Instance.InstanceId --region $Region
-                        Write-Host "EC2 instance [$($ec2Instance.InstanceId)] has been successfully deleted."
+                        Write-Host "EC2 instance [$($ec2Instance.InstanceId)] has been successfully deleted in region [$Region]."
                     } catch {
                         Write-Host "Failed to delete EC2 instance [$($ec2Instance.InstanceId)] in region [$Region]."
                         continue
@@ -90,18 +94,20 @@ Cleanup-AWS-Resources-If-Exist -TemplateBody $TemplateBody -GetListOfStateMachin
 
 # Verify resource cleanup process
 try {
-    $stateMachineCleanupStatus = aws stepfunctions list-state-machines | ConvertFrom-Json
-    $ActivityCleanupStatus = aws stepfunctions list-activities | ConvertFrom-Json
-    $ec2InstanceCleanupStatus = aws ec2 describe-instances | ConvertFrom-Json
+    foreach ($Region in $RegionList.RegionName) {
+        $stateMachineCleanupStatus = aws stepfunctions list-state-machines --region $Region | ConvertFrom-Json
+        $ActivityCleanupStatus = aws stepfunctions list-activities --region $Region | ConvertFrom-Json
+        $ec2InstanceCleanupStatus = aws ec2 describe-instances --region $Region | ConvertFrom-Json
 
-    if ($stateMachineCleanupStatus.stateMachines.Count -ne 0) {
-        Write-Host "State machine still exists in your AWS resource space."
-    } elseif ($ActivityCleanupStatus.activities.Count -ne 0) {
-        Write-Host "Activity still exists in your AWS resource space."
-    } elseif ($ec2InstanceCleanupStatus.Reservations.Count -ne 0) {
-        Write-Host "EC2 instance still exists in your AWS resource space."
-    } else {
-        Write-Host "AWS resource space is empty."
+        if ($stateMachineCleanupStatus.stateMachines.Count -ne 0) {
+            Write-Host "State machines still exist in region [$Region]."
+        } elseif ($ActivityCleanupStatus.activities.Count -ne 0) {
+            Write-Host "Activities still exist in region [$Region]."
+        } elseif ($ec2InstanceCleanupStatus.Reservations.Count -ne 0) {
+            Write-Host "EC2 instances still exist in region [$Region]."
+        } else {
+            Write-Host "AWS resource space is empty in region [$Region]."
+        }
     }
 } catch {
     Write-Host "Failed to verify resource cleanup: $_"
