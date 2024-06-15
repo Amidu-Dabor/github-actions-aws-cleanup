@@ -8,7 +8,8 @@ $ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
 $ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
 
 # Get all regions and filter out those that match "us-east" or "us-west"
-$RegionList = (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -notmatch 'us-east|us-west' }
+$RegionList = Get-AWSRegion
+# (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -notmatch 'us-east|us-west' }
 
 function Cleanup-AWS-Resources-If-Exist {
     param (
@@ -19,38 +20,25 @@ function Cleanup-AWS-Resources-If-Exist {
         $GetRegionList
     )
 
-    foreach ($Region in $GetRegionList.RegionName) {
+    foreach ($Region in $GetRegionList.Region) {
         # Delete all state machines if list is not empty
         if ($GetListOfStateMachines.stateMachines.Count -eq 0) {
             Write-Host "No state machines found."
         } else {
-            foreach ($stateMachine in $GetListOfStateMachines.stateMachines) {
-                try {
-                    Write-Host "Deleting state machine [$($stateMachine.stateMachineArn)]..."
-                    aws stepfunctions delete-state-machine --state-machine-arn $stateMachine.stateMachineArn --region $Region
-                    Write-Host "State machine [$($stateMachine.stateMachineArn)] has been successfully deleted."
-                } catch {
-                    # Handle the case where the state machine does not exist
-                    Write-Host "Failed to delete state machine [$($stateMachine.stateMachineArn)]."
-                    continue
-                }
-            }
-        }
+            try {
+                Write-Host "Deleting state machine [$($stateMachine.stateMachineArn)]..."
+                Remove-SFNStateMachine -StateMachineArn $_.StateMachineArn -Region $Region
+                # aws stepfunctions delete-state-machine --state-machine-arn $stateMachine.stateMachineArn --region $Region
+                Write-Host "State machine [$($stateMachine.stateMachineArn)] has been successfully deleted."
 
-        # Delete all activity tasks if list is not empty
-        if ($GetListOfActivities.activities.Count -eq 0) {
-            Write-Host "No activities found."
-        } else {
-            foreach ($activity in $GetListOfActivities.activities) {
-                try {
-                    Write-Host "Deleting activity [$($activity.activityArn)]..."
-                    aws stepfunctions delete-activity --activity-arn $activity.activityArn --region $Region
-                    Write-Host "Activity [$($activity.activityArn)] has been successfully deleted."
-                } catch {
-                    # Handle the case where the activity does not exist
-                    Write-Host "Failed to delete activity [$($activity.activityArn)]."
-                    continue
-                }
+                Write-Host "Deleting activity [$($activity.activityArn)]..."
+                Remove-SFNActivity -ActivityArn $_.ActivityArn -Region $Region
+                # aws stepfunctions delete-activity --activity-arn $activity.activityArn --region $Region
+                Write-Host "Activity [$($activity.activityArn)] has been successfully deleted."
+            } catch {
+                # Handle the case where the state machine does not exist
+                Write-Host "Failed to delete state machine [$($stateMachine.stateMachineArn)]."
+                continue
             }
         }
 
@@ -62,7 +50,8 @@ function Cleanup-AWS-Resources-If-Exist {
                 foreach ($ec2Instance in $reservation.Instances) {
                     try {
                         Write-Host "Deleting EC2 instance [$($ec2Instance.InstanceId)]..."
-                        aws ec2 terminate-instances --instance-ids $ec2Instance.InstanceId --region $Region
+                        Remove-EC2Instance -InstanceId $_.InstanceId -Region $Region
+                        # aws ec2 terminate-instances --instance-ids $ec2Instance.InstanceId --region $Region
                         Write-Host "EC2 instance [$($ec2Instance.InstanceId)] has been successfully deleted."
                     } catch {
                         # Handle the case where the instance does not exist
