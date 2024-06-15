@@ -3,9 +3,12 @@ param (
 )
 
 # Initialize lists outside the param block
-$StateMachineList = aws stepfunctions list-state-machines | ConvertFrom-Json
-$ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
-$ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
+$StateMachineList = Get-SFNStateMachineList
+# aws stepfunctions list-state-machines | ConvertFrom-Json
+$ActivityList = Get-SFNActivityList
+# aws stepfunctions list-activities | ConvertFrom-Json
+$ec2InstanceList = (Get-EC2Instance).Instances
+# aws ec2 describe-instances | ConvertFrom-Json
 
 # Get all regions and filter out those that match "us-east" or "us-west"
 $RegionList = Get-AWSRegion
