@@ -25,8 +25,8 @@ function Cleanup-AWS-Resources-If-Exist {
 
     foreach ($Region in $GetRegionList.Region) {
         # Delete all state machines if list is not empty
-        if ($GetListOfStateMachines.stateMachines.Count -eq 0) {
-            Write-Host "No state machines found."
+        if ($GetListOfStateMachines.stateMachines.Count -eq 0 -or $GetListOfActivities.Count -eq 0) {
+            Write-Host "No state machines/activities found."
         } else {
             try {
                 Write-Host "Deleting state machine [$($stateMachine.stateMachineArn)]..."
