@@ -8,7 +8,8 @@ $ActivityList = aws stepfunctions list-activities | ConvertFrom-Json
 $ec2InstanceList = aws ec2 describe-instances | ConvertFrom-Json
 
 # Get all regions and filter to include only "us-east" or "us-west"
-$RegionList = (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -match 'us-east|us-west' }
+$RegionList = Get-AWSRegion
+# (aws ec2 describe-regions | ConvertFrom-Json).Regions | Where-Object { $_.RegionName -match 'us-east|us-west' }
 
 function Cleanup-AWS-Resources-If-Exist {
     param (
@@ -19,7 +20,7 @@ function Cleanup-AWS-Resources-If-Exist {
         $GetRegionList
     )
 
-    foreach ($Region in $GetRegionList.RegionName) {
+    foreach ($Region in $GetRegionList.Region) {
         # Delete all state machines if list is not empty
         if ($GetListOfStateMachines.stateMachines.Count -eq 0 -or $GetListOfActivities.Count -eq 0) {
             Write-Host "No state machines/activities found."
